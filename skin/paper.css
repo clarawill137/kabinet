@@ -1,0 +1,8 @@
+/* Кабинет · Бумага — цвета */
+:root {
+  --k-paper: #F6F1E7; --k-panel: #FAF6EE; --k-card: #FFFDF8; --k-user: #F3ECDD; --k-field: #FFFDF8;
+  --k-ink: #3A352C; --k-muted: #8B8272; --k-em: #6F7F5C; --k-quote: #A0652A; --k-rose: #9A4E5C;
+  --k-accent: #6E8566; --k-accent-soft: rgba(110, 133, 102, 0.14); --k-line: rgba(98, 84, 60, 0.16); --k-line-strong: rgba(98, 84, 60, 0.32);
+  --k-shadow: rgba(80, 64, 40, 0.07); --k-icon: #5E5648;
+  --SmartThemeCheckboxTickColor: #FFFDF8;
+}

@@ -50,6 +50,73 @@ function toast(msg, type = 'info') { try { globalThis.toastr?.[type]?.(msg, 'К�
 
 function stripExt(name) { return String(name || '').replace(/\.[^/.]+$/, ''); }
 
+// ---------- скин ----------
+// CSS тем «Кабинет · Ночь / Бумага» до 0.3.0 лежал в custom CSS настроек ST (24К символов в settings.json).
+// Теперь он в репе (skin/*.css) и подключается отсюда, когда выбрана тема Кабинета.
+const BASE_URL = new URL('.', import.meta.url).pathname;
+const SKINS = { 'Кабинет · Ночь': 'night', 'Кабинет · Бумага': 'paper' };
+const LEGACY_MARK = 'тема для Кабинета';
+
+function currentSkin() {
+    const name = ctx().powerUserSettings?.theme || document.getElementById('themes')?.value || '';
+    return SKINS[name] || '';
+}
+
+function linkCss(id, href) {
+    let el = document.getElementById(id);
+    if (!href) { el?.remove(); return; }
+    if (!el) {
+        el = document.createElement('link');
+        el.id = id;
+        el.rel = 'stylesheet';
+        document.head.appendChild(el);
+    }
+    if (el.getAttribute('href') !== href) el.setAttribute('href', href);
+}
+
+function applySkin() {
+    const v = currentSkin();
+    linkCss('kab-skin-base', v ? `${BASE_URL}skin/base.css` : '');
+    linkCss('kab-skin-vars', v ? `${BASE_URL}skin/${v}.css` : '');
+    document.body.classList.toggle('kab-skin', !!v);
+}
+
+// Старый CSS убирается из живых настроек всегда, когда встречается (ST может вернуть его из закэшированной темы),
+// а файлы тем на сервере чистятся один раз: в них остаются только цвета и прочие настройки ST.
+async function migrateLegacyCss() {
+    const pu = ctx().powerUserSettings;
+    if (pu && String(pu.custom_css || '').includes(LEGACY_MARK)) {
+        const ta = document.getElementById('customCSS');
+        if (ta) $(ta).val('').trigger('input');
+        else {
+            pu.custom_css = '';
+            const st = document.getElementById('custom-style');
+            if (st) st.innerHTML = '';
+            save();
+        }
+    }
+    const s = settings();
+    if (s.skinMigrated) return;
+    try {
+        const headers = ctx().getRequestHeaders();
+        const r = await fetch('/api/settings/get', { method: 'POST', headers, body: '{}' });
+        if (!r.ok) throw new Error(`settings/get ${r.status}`);
+        const data = await r.json();
+        let n = 0;
+        for (const t of data.themes || []) {
+            if (!SKINS[t.name] || !String(t.custom_css || '').includes(LEGACY_MARK)) continue;
+            const res = await fetch('/api/themes/save', { method: 'POST', headers, body: JSON.stringify({ ...t, custom_css: '' }) });
+            if (!res.ok) throw new Error(`themes/save ${res.status}`);
+            n++;
+        }
+        s.skinMigrated = true;
+        save();
+        if (n) toast(`Тема переехала в расширение: старый CSS убран из ${n} тем.`, 'success');
+    } catch (e) {
+        console.warn('[Кабинет] не вышло почистить файлы тем, попробую при следующей загрузке', e);
+    }
+}
+
 // ---------- themes ----------
 // Цвета для свотчей: [фон панели, карточка, текст, реплики, курсив] — для тем, которые ставит установщик
 const THEME_META = {
@@ -589,13 +656,17 @@ async function renderDays(el) {
 jQuery(async () => {
     try {
         settings();
+        applySkin();
         buildUI();
         applyLook();
+        migrateLegacyCss();
         const { eventSource, event_types } = ctx();
         eventSource?.on?.(event_types.CHAT_CHANGED, () => { if (state.open) renderTab(); });
-        eventSource?.on?.(event_types.SETTINGS_LOADED, () => applyLook());
-        // тему могут сменить и из настроек ST — панель перекрашивается вслед
+        eventSource?.on?.(event_types.SETTINGS_LOADED, () => { applySkin(); applyLook(); });
+        // тему могут сменить и из настроек ST — скин и панель идут следом
         $(document).on('change', '#themes', () => setTimeout(() => {
+            migrateLegacyCss();
+            applySkin();
             applyLook();
             if (state.open && settings().tab === 'view') renderTab();
         }, 350));
