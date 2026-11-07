@@ -1,0 +1,660 @@
+/* =========================================================
+   Кабинет 0.2 — панель и режим чтения.
+   Своей темы у расширения больше нет: цвета берутся из активной темы ST
+   (SmartTheme-переменные), а если тема Кабинета — из её --k-* токенов.
+   ========================================================= */
+body {
+    --kab-bg: var(--kab-bg-solid, var(--SmartThemeBlurTintColor, #f3f5ec));
+    --kab-paper: var(--kab-card-solid, var(--SmartThemeBotMesBlurTintColor, #fafbf6));
+    --kab-ink: var(--k-ink, var(--SmartThemeBodyColor, #353a31));
+    --kab-muted: var(--k-muted, color-mix(in srgb, var(--SmartThemeBodyColor, #353a31) 58%, transparent));
+    --kab-accent: var(--k-accent, var(--SmartThemeQuoteColor, #7f9f6c));
+    --kab-accent-soft: var(--k-accent-soft, color-mix(in srgb, var(--kab-accent) 16%, transparent));
+    --kab-border: var(--k-line, color-mix(in srgb, var(--SmartThemeBodyColor, #353a31) 14%, transparent));
+    --kab-title: var(--k-font-name, Georgia, 'Times New Roman', serif);
+    --kab-fs: 17px;
+    --kab-lh: 1.75;
+    --kab-w: 760px;
+}
+
+/* =========================================================
+   Режим чтения (шрифт берётся из темы, размер — из ползунков)
+   ========================================================= */
+body.kabinet-read #chat {
+    max-width: var(--kab-w);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+body.kabinet-read #chat .mesAvatarWrapper,
+body.kabinet-read #chat .mes_buttons,
+body.kabinet-read #chat .extraMesButtons,
+body.kabinet-read #chat .mes_timer,
+body.kabinet-read #chat .tokenCounterDisplay,
+body.kabinet-read #chat .mesIDDisplay,
+body.kabinet-read #chat .timestamp,
+body.kabinet-read #chat .mes_reasoning_details {
+    display: none !important;
+}
+
+body.kabinet-read #chat .mes {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+body.kabinet-read #chat .mes_text {
+    font-size: var(--kab-fs) !important;
+    line-height: var(--kab-lh) !important;
+}
+
+body.kabinet-read #chat .mes_text > p {
+    text-indent: 1.4em;
+    margin: 0 0 .55em;
+}
+
+body.kabinet-read #chat .mes[is_user="true"] .mes_text {
+    border-left: 2px solid var(--kab-accent);
+    padding-left: 12px;
+}
+
+body.kabinet-read #chat .mes[is_user="true"] .mes_text > p {
+    text-indent: 0;
+}
+
+body.kabinet-read #chat .swipe_left,
+body.kabinet-read #chat .swipe_right,
+body.kabinet-read #chat .swipes-counter {
+    opacity: .35;
+}
+
+/* =========================================================
+   Язычок и панель
+   ST ставит на <html> transform: translateZ(0) — fixed-элементы меряются от <html>
+   нулевой высоты. Поэтому высоты и отступы только в единицах окна (vh/dvh).
+   ========================================================= */
+#kab-handle {
+    position: fixed;
+    right: 0;
+    top: 42vh;
+    top: 42dvh;
+    z-index: 19990;
+    width: 30px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--kab-bg);
+    color: var(--kab-accent);
+    border: 1px solid var(--kab-border);
+    border-right: none;
+    border-radius: 12px 0 0 12px;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, .08);
+    cursor: pointer;
+    font-size: 15px;
+}
+
+#kab-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 19998;
+    background: rgba(20, 18, 14, .35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+}
+
+#kab-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 19999;
+    width: min(440px, calc(100vw - 44px));
+    display: flex;
+    flex-direction: column;
+    background: var(--kab-bg);
+    color: var(--kab-ink);
+    border-left: 1px solid var(--kab-border);
+    font-size: 14px;
+    transform: translateX(105%);
+    transition: transform .25s ease;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    text-shadow: none;
+}
+
+body.kab-open #kab-panel { transform: translateX(0); }
+body.kab-open #kab-backdrop { opacity: 1; pointer-events: auto; }
+
+#kab-panel * { box-sizing: border-box; text-shadow: none; }
+
+.kab-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 8px;
+}
+
+.kab-title {
+    font-family: var(--kab-title);
+    font-size: 24px;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--kab-ink);
+}
+
+.kab-title small {
+    display: block;
+    font-family: inherit;
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .25em;
+    color: var(--kab-muted);
+}
+
+#kab-panel .kab-x {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--kab-muted);
+    font-size: 18px;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.kab-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px 16px 12px;
+    border-bottom: 1px solid var(--kab-border);
+}
+
+#kab-panel .kab-tabs button {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    box-shadow: none;
+    color: var(--kab-muted);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#kab-panel .kab-tabs button.active {
+    background: var(--kab-paper);
+    border-color: var(--kab-border);
+    color: var(--kab-ink);
+    font-weight: 700;
+}
+
+.kab-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 24px;
+}
+
+.kab-section {
+    background: var(--kab-paper);
+    border: 1px solid var(--kab-border);
+    border-radius: 14px;
+    padding: 4px 14px;
+    margin-bottom: 14px;
+}
+
+.kab-section-flat {
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.kab-opt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--kab-border);
+    cursor: pointer;
+}
+
+.kab-opt:last-child { border-bottom: none; }
+.kab-opt-text b { display: block; font-weight: 600; }
+.kab-opt-text small { color: var(--kab-muted); font-size: 12px; }
+
+/* темы */
+.kab-group-title {
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--kab-muted);
+    margin: 4px 2px 8px;
+}
+
+.kab-themes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+#kab-panel .kab-theme {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--kab-border);
+    background: var(--kab-paper);
+    box-shadow: none;
+    color: var(--kab-ink);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+}
+
+#kab-panel .kab-theme.active {
+    border: 2px solid var(--kab-accent);
+    padding: 7px;
+}
+
+.kab-theme-name {
+    font-weight: 600;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.kab-swatches {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+    padding: 7px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, .08);
+}
+
+.kab-swatches i {
+    flex: 1;
+    height: 16px;
+    border-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, .06);
+}
+
+.kab-swatch-none {
+    display: block;
+    width: 100%;
+    height: 32px;
+    border-radius: 8px;
+    background: repeating-linear-gradient(45deg, var(--kab-border) 0 6px, transparent 6px 12px);
+}
+
+.kab-more summary {
+    cursor: pointer;
+    color: var(--kab-muted);
+    font-size: 13px;
+    margin: 0 2px 10px;
+}
+
+/* ползунки */
+.kab-range { display: block; padding: 12px 0; }
+.kab-range-head { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.kab-range-head output { color: var(--kab-muted); }
+
+#kab-panel .kab-range input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    margin: 10px 0;
+    padding: 0;
+    border: none;
+    border-radius: 2px;
+    background: var(--kab-border);
+    box-shadow: none;
+}
+
+#kab-panel .kab-range input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    margin-top: 0;
+    border-radius: 50%;
+    background: var(--kab-paper);
+    border: 2px solid var(--kab-accent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+}
+
+#kab-panel .kab-range input[type=range]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--kab-paper);
+    border: 2px solid var(--kab-accent);
+}
+
+/* переключатель. ST и многие темы стилизуют все чекбоксы (размер = 1em, appearance, transform) —
+   поэтому невидимому чекбоксу явно возвращаем размер всего тумблера, иначе тап по правой части мимо */
+.kab-sw {
+    position: relative;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 26px;
+}
+
+#kab-panel .kab-sw input {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+    z-index: 2;
+    transform: none !important;
+    filter: none !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+    display: block !important;
+    cursor: pointer;
+}
+
+#kab-panel .kab-sw input::before,
+#kab-panel .kab-sw input::after { display: none !important; content: none !important; }
+
+.kab-sw i {
+    position: absolute;
+    inset: 0;
+    border-radius: 13px;
+    background: var(--kab-border);
+    transition: background .2s;
+}
+
+.kab-sw i::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+    transition: transform .2s;
+}
+
+.kab-sw input:checked + i { background: var(--kab-accent); }
+.kab-sw input:checked + i::after { transform: translateX(18px); }
+
+/* поля */
+#kab-panel .kab-select,
+#kab-panel .kab-input {
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--kab-border);
+    background: var(--kab-paper);
+    color: var(--kab-ink);
+    font: inherit;
+    font-size: 15px;
+}
+
+.kab-field > span {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--kab-muted);
+    margin-bottom: 4px;
+}
+
+.kab-note {
+    font-size: 12px;
+    color: var(--kab-muted);
+    margin: 2px 2px 10px;
+}
+
+.kab-note-in { margin: 10px 0 0; }
+
+.kab-empty {
+    text-align: center;
+    color: var(--kab-muted);
+    padding: 30px 10px;
+}
+
+#kab-panel .kab-btn {
+    border: 1px solid var(--kab-border);
+    background: var(--kab-paper);
+    color: var(--kab-ink);
+    box-shadow: none;
+    border-radius: 10px;
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* карточки */
+.kab-list {
+    background: var(--kab-paper);
+    border: 1px solid var(--kab-border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.kab-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--kab-border);
+}
+
+.kab-card:last-child { border-bottom: none; }
+.kab-card.slim { align-items: center; padding: 10px 14px; }
+.kab-card.off .kab-card-title { color: var(--kab-muted); }
+
+.kab-card-main { flex: 1; min-width: 0; cursor: pointer; }
+.kab-card-title { font-weight: 600; line-height: 1.35; }
+.kab-card-sub {
+    font-size: 12px;
+    color: var(--kab-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kab-card-content {
+    display: none;
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.kab-card.open .kab-card-content { display: block; }
+
+.kab-badge {
+    display: inline-block;
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    margin-left: 6px;
+    border-radius: 8px;
+    background: var(--kab-accent-soft);
+    color: var(--kab-accent);
+    vertical-align: 2px;
+}
+
+.kab-theme .kab-badge { margin-left: 0; }
+
+.kab-fixed { font-size: 11px; color: var(--kab-muted); }
+
+/* лента дней */
+.kab-days-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.kab-days-head b { font-family: var(--kab-title); font-style: italic; font-size: 19px; }
+.kab-days-head small { display: block; color: var(--kab-muted); font-size: 12px; }
+
+.kab-timeline { position: relative; padding-left: 34px; }
+
+.kab-timeline::before {
+    content: '';
+    position: absolute;
+    left: 13px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--kab-border);
+}
+
+.kab-seg { position: relative; margin-bottom: 12px; }
+
+.kab-seg-num {
+    position: absolute;
+    left: -34px;
+    top: 10px;
+    width: 28px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--kab-accent);
+    color: var(--kab-paper);
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kab-seg.off .kab-seg-num { background: var(--kab-muted); }
+
+.kab-seg-card {
+    background: var(--kab-paper);
+    border: 1px solid var(--kab-border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.kab-seg-title { font-weight: 600; margin-bottom: 4px; }
+
+.kab-seg-text {
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.kab-seg-card.open .kab-seg-text {
+    display: block;
+    -webkit-line-clamp: unset;
+}
+
+/* =========================================================
+   Кнопки над полем ввода (Quick Reply + кнопки скриптов Tavern Helper — всё живёт в #qr--bar)
+   ========================================================= */
+/* свёрнуто: в форме остаётся только строка ввода */
+body.kab-qr-hidden #send_form > :not(#nonQRFormItems):not(#file_form) {
+    display: none !important;
+}
+
+/* одна строка с прокруткой вбок вместо стопки по центру */
+body.kab-qr-compact #qr--bar {
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 6px 8px !important;
+    gap: 6px !important;
+}
+
+body.kab-qr-compact #qr--bar::-webkit-scrollbar { display: none; }
+
+body.kab-qr-compact #qr--bar .qr--buttons {
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: none !important;
+    gap: 6px !important;
+}
+
+body.kab-qr-compact #qr--bar .qr--button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 34px;
+    line-height: 1.2;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    margin: 2px 0 !important;
+    padding: 4px 10px !important;
+    font-size: .9em;
+}
+
+#kab-qr-btn { opacity: .7; }
+
+/* свои кнопки у поля ввода — в размер иконок ST/темы */
+#leftSendForm > #kab-send-btn,
+#leftSendForm > #kab-qr-btn {
+    font-size: calc(var(--mainFontSize, 15px) * 1.2);
+}
+
+/* Без «компактного ввода» ST на телефоне ставит левые кнопки столбиком (width: 1.15em; wrap).
+   С кнопками Кабинета это превращается в башню — держим их строкой всегда. */
+#send_form #leftSendForm:has(#kab-send-btn) {
+    flex-wrap: nowrap !important;
+    width: auto !important;
+    height: auto !important;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+/* Шапка GOD COMPLEX (div data-gc="top"): время не переносится на две строки, место уступает адрес */
+#chat .mes_text [data-gc="top"] > span:first-child {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+#chat .mes_text [data-gc="top"] > span:last-child {
+    min-width: 0;
+}
