@@ -74,8 +74,16 @@ function linkCss(id, href) {
     if (el.getAttribute('href') !== href) el.setAttribute('href', href);
 }
 
+// Тема Life («Графит и вино») выключает custom CSS тем ST (killCustom). Пока скин жил там, он под Life молчал —
+// так и оставляем: при включённой теме Life скин Кабинета не подключается.
+function lifeTakesOver() {
+    if (!document.body.classList.contains('lf-theme')) return false;
+    const lf = (EXT.extension_settings || ctx().extensionSettings)?.life;
+    return lf?.cc?.killCustom !== false;
+}
+
 function applySkin() {
-    const v = currentSkin();
+    const v = lifeTakesOver() ? '' : currentSkin();
     linkCss('kab-skin-base', v ? `${BASE_URL}skin/base.css` : '');
     linkCss('kab-skin-vars', v ? `${BASE_URL}skin/${v}.css` : '');
     document.body.classList.toggle('kab-skin', !!v);
@@ -660,6 +668,8 @@ jQuery(async () => {
         buildUI();
         applyLook();
         migrateLegacyCss();
+        // Life включает/выключает свою тему классом на body — скин идёт следом
+        try { new MutationObserver(() => applySkin()).observe(document.body, { attributes: true, attributeFilter: ['class'] }); } catch { /* */ }
         const { eventSource, event_types } = ctx();
         eventSource?.on?.(event_types.CHAT_CHANGED, () => { if (state.open) renderTab(); });
         eventSource?.on?.(event_types.SETTINGS_LOADED, () => { applySkin(); applyLook(); });
